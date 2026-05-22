@@ -1,0 +1,74 @@
+---
+name: audit-klaviyo
+description: Genere le rapport d'audit e-mail Klaviyo (PPTX) pour un client deja configure. Demande quel client et quel mois, recupere les donnees via l'API, et produit la presentation dans ~/.klaviyo-audit/output/.
+---
+
+# /audit-klaviyo — Génération du rapport mensuel
+
+Tu vas générer un rapport d'audit e-mail Klaviyo pour un client déjà configuré.
+
+## Étape 1 — Sélection du client
+
+Liste les clients configurés :
+
+```bash
+ls ~/.klaviyo-audit/clients/
+```
+
+Sur Windows PowerShell :
+```powershell
+Get-ChildItem ~/.klaviyo-audit/clients/
+```
+
+- **Aucun client** → réponds : « Aucun client configuré. Lance `/audit-klaviyo-setup` d'abord. »
+- **Un seul client** → utilise-le directement, mais confirme à l'utilisateur (ex : « Je vais générer le rapport pour `skwheel`, OK ? »).
+- **Plusieurs clients** → demande à l'utilisateur lequel.
+
+Note le slug choisi.
+
+## Étape 2 — Choix du mois
+
+Demande à l'utilisateur :
+
+> **Quel mois veux-tu auditer ?** Format `YYYY-MM` (ex : `2026-04` pour avril 2026).
+
+Si l'utilisateur dit « le mois dernier » ou « avril » sans année, calcule à partir de la date du jour.
+
+## Étape 3 — Génération du rapport
+
+Lance :
+
+```bash
+# Mac / Linux
+KLAVIYO_AUDIT_CLIENT=[slug] REPORT_MONTH=[YYYY-MM] node ${CLAUDE_PLUGIN_ROOT}/scripts/index.js
+
+# Windows PowerShell
+$env:KLAVIYO_AUDIT_CLIENT="[slug]"; $env:REPORT_MONTH="[YYYY-MM]"; node ${CLAUDE_PLUGIN_ROOT}/scripts/index.js
+```
+
+Le script affiche les étapes en direct :
+1. Récupération des campagnes
+2. Récupération des séquences
+3. Récupération de la délivrabilité
+4. Génération PPTX
+
+Compter 2 à 5 minutes selon la taille du compte.
+
+## Étape 4 — Annoncer le résultat
+
+Le fichier est sauvegardé dans `~/.klaviyo-audit/output/Rapport Mission [CLIENT] [Mois] - [Auteur].pptx`.
+
+Annonce à l'utilisateur le chemin complet et propose-lui de l'ouvrir.
+
+Si le script échoue, regarde le code retour :
+- **401** → clé API invalide. Suggérer de régénérer via `/audit-klaviyo-setup`.
+- **429** → rate limit Klaviyo. Le script gère normalement le retry — si ça échoue malgré tout, attendre 5 min et relancer.
+- **« Métrique Placed Order non trouvée »** → Klaviyo n'a aucune intégration e-commerce. Vérifier côté Klaviyo qu'au moins Shopify ou WooCommerce est connecté.
+- Voir [`skills/klaviyo-audit/references/troubleshooting.md`](../skills/klaviyo-audit/references/troubleshooting.md) pour le détail.
+
+## Étape 5 — Slide « Prochaines étapes »
+
+Rappelle à l'utilisateur que la slide 8 « Prochaines étapes » contient un placeholder qu'il faut **éditer manuellement** chaque mois (le contenu dépend du contexte client). Deux options :
+
+1. Modifier directement le PPTX dans PowerPoint après génération.
+2. Modifier le code Node pour générer le bon contenu — pour ça, ouvrir [`scripts/generate-pptx.js`](../scripts/generate-pptx.js) et chercher `nextSteps = [`.
