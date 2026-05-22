@@ -1,0 +1,112 @@
+// ============================================================
+// CONFIG LOADER — charge la config d'un client depuis
+// ~/.klaviyo-audit/clients/[slug].json
+//
+// Variables d'env attendues:
+//   KLAVIYO_AUDIT_CLIENT  : slug du client (ex: "skwheel")
+//   REPORT_MONTH          : mois a auditer (format YYYY-MM)
+//   KLAVIYO_API_KEY       : (optionnel) override de la cle API
+//   KLAVIYO_AUDIT_HOME    : (optionnel) override du dossier ~/.klaviyo-audit
+//   OUTPUT_DIR            : (optionnel) override du dossier de sortie
+// ============================================================
+
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+
+const HOME_DIR = process.env.KLAVIYO_AUDIT_HOME || path.join(os.homedir(), ".klaviyo-audit");
+const CLIENT_SLUG = process.env.KLAVIYO_AUDIT_CLIENT;
+
+if (!CLIENT_SLUG) {
+  console.error("ERREUR: variable d'env KLAVIYO_AUDIT_CLIENT manquante.");
+  console.error("Lancez /audit-klaviyo-setup pour configurer un client, ou definissez la variable manuellement.");
+  process.exit(1);
+}
+
+const clientFile = path.join(HOME_DIR, "clients", CLIENT_SLUG + ".json");
+if (!fs.existsSync(clientFile)) {
+  console.error(`ERREUR: fichier de config introuvable: ${clientFile}`);
+  console.error(`Lancez /audit-klaviyo-setup pour creer la config du client "${CLIENT_SLUG}".`);
+  process.exit(1);
+}
+
+let clientConfig;
+try {
+  clientConfig = JSON.parse(fs.readFileSync(clientFile, "utf8"));
+} catch (e) {
+  console.error(`ERREUR: impossible de parser ${clientFile}: ${e.message}`);
+  process.exit(1);
+}
+
+// Mois par defaut: mois precedent
+function defaultMonth() {
+  const now = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+}
+
+const REPORT_MONTH = process.env.REPORT_MONTH || defaultMonth();
+
+// Validation format YYYY-MM
+if (!/^\d{4}-\d{2}$/.test(REPORT_MONTH)) {
+  console.error(`ERREUR: REPORT_MONTH "${REPORT_MONTH}" invalide. Format attendu: YYYY-MM (ex: 2026-04).`);
+  process.exit(1);
+}
+
+const MONTH_NAMES = ["Janvier","Fevrier","Mars","Avril","Mai","Juin","Juillet","Aout","Septembre","Octobre","Novembre","Decembre"];
+const MONTH_NAMES_ACC = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+module.exports = {
+  KLAVIYO_API_KEY: process.env.KLAVIYO_API_KEY || clientConfig.apiKey,
+  KLAVIYO_API_REVISION: clientConfig.apiRevision || "2024-10-15",
+
+  REPORT_MONTH,
+  CLIENT_SLUG,
+
+  CLIENT: {
+    name: clientConfig.client?.name || CLIENT_SLUG.toUpperCase(),
+    tagline: clientConfig.client?.tagline || "",
+    currency: clientConfig.client?.currency || "€",
+    integration: clientConfig.client?.integration || null,
+  },
+
+  AUTHOR: {
+    name: clientConfig.author?.name || "Consultant",
+    company: clientConfig.author?.company || "",
+    email: clientConfig.author?.email || "",
+  },
+
+  FEATURES: {
+    topFlopHighlight: true,
+    industryBenchmarks: true,
+    autoInsights: true,
+    debug: false,
+    ...(clientConfig.features || {}),
+  },
+
+  BENCHMARKS: clientConfig.benchmarks || {
+    openRate: 39.6,
+    clickRate: 1.4,
+    bounceRate: 0.5,
+    spamRate: 0.02,
+    unsubRate: 0.20,
+  },
+
+  OUTPUT_DIR: process.env.OUTPUT_DIR || clientConfig.outputDir || path.join(HOME_DIR, "output"),
+
+  get PREVIOUS_MONTH() {
+    const [year, month] = this.REPORT_MONTH.split("-").map(Number);
+    const prev = new Date(year, month - 2, 1);
+    return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+  },
+
+  get MONTH_LABEL() {
+    const [year, month] = this.REPORT_MONTH.split("-").map(Number);
+    return MONTH_NAMES_ACC[month - 1] + " " + year;
+  },
+
+  get PREV_MONTH_LABEL() {
+    const [year, month] = this.PREVIOUS_MONTH.split("-").map(Number);
+    return MONTH_NAMES_ACC[month - 1] + " " + year;
+  },
+};
