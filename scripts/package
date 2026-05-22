@@ -1,0 +1,23 @@
+{
+  "name": "klaviyo-audit-scripts",
+  "version": "1.0.0",
+  "description": "Scripts Node.js du plugin Klaviyo Audit — Renard Publishing",
+  "main": "index.js",
+  "scripts": {
+    "generate": "node index.js",
+    "test-api": "node test-api.js"
+  },
+  "dependencies": {
+    "pptxgenjs": "^3.12.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^4.12.0",
+    "sharp": "^0.33.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "Jerome Renard - Renard Publishing",
+  "license": "UNLICENSED",
+  "private": true
+}
