@@ -1,0 +1,12 @@
+{
+  "name": "klaviyo-audit",
+  "version": "1.0.0",
+  "description": "Generateur d'audit e-mail Klaviyo (PPTX) — Hélios Rédaction. Recupere campagnes, sequences et delivrabilite d'un mois donne et produit une presentation prete a livrer.",
+  "author": {
+    "name": "Jordan Henry Paul",
+    "email": "jordanhenrypaul@gmail.com",
+    "url": "https://heliosredaction.fr"
+  },
+  "license": "UNLICENSED",
+  "keywords": ["klaviyo", "email", "audit", "report", "pptx", "renard-publishing"]
+}
