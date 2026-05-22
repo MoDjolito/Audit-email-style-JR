@@ -1,0 +1,136 @@
+---
+name: audit-klaviyo-setup
+description: Configure un nouveau client pour le skill Klaviyo Audit. Pose toutes les questions necessaires (cle API, infos client, devise, integration, features), enregistre la config dans ~/.klaviyo-audit/clients/[slug].json et teste la connexion.
+---
+
+# /audit-klaviyo-setup — Configuration d'un client
+
+Tu vas configurer un nouveau client pour le skill **Klaviyo Audit** (Renard Publishing).
+
+## Étape 0 — Pré-requis
+
+Vérifie que **Node.js ≥ 18** est installé :
+
+```bash
+node --version
+```
+
+- Si OK → continue à l'étape 1.
+- Si non installé : guide l'utilisateur sur <https://nodejs.org/> (LTS) puis demande-lui de relancer la commande après installation.
+
+Installe les dépendances du plugin si pas encore fait (à faire **une seule fois** quel que soit le nombre de clients) :
+
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && npm install
+```
+
+## Étape 1 — Identifiant du client
+
+Demande à l'utilisateur :
+
+> **Quel client veux-tu configurer ?** Donne un identifiant court en kebab-case (ex : `skwheel`, `mon-shop`, `acme-corp`). Cet identifiant sera utilisé en interne et n'apparaît pas sur le rapport.
+
+Vérifie que l'identifiant n'existe pas déjà dans `~/.klaviyo-audit/clients/`. Si oui, demande s'il veut écraser ou choisir un autre slug.
+
+## Étape 2 — Clé API Klaviyo
+
+Demande la clé API Klaviyo. Si l'utilisateur ne sait pas comment la créer, guide-le :
+
+1. Connexion sur **klaviyo.com**
+2. Nom du compte (haut droit) → **Settings**
+3. Onglet **API Keys** (sidebar)
+4. Bouton **Create Private API Key**
+5. Nom de la clé : libre (ex : « Rapport mensuel Renard Publishing »)
+6. **Permissions** : Read-only — cocher au minimum **Campaigns, Flows, Metrics, Profiles, Lists**
+7. **Create** → copier la clé (commence par `pk_`). Elle ne sera affichée qu'une fois.
+
+⚠️ **Ne JAMAIS écrire la clé en clair dans la conversation après réception.** Référence-la simplement comme « la clé API ».
+
+## Étape 3 — Infos client
+
+Pose ces questions une par une :
+
+1. **Nom du client** (affiché sur la page de titre du rapport) — ex : `SKWHEEL`
+2. **Tagline / sous-titre** (sous le nom) — ex : `Les premiers skis électriques au monde`
+3. **Devise** — propose : `€` (EUR), `$` (USD), `£` (GBP), `CHF`, `CA$`. L'utilisateur peut taper une autre devise.
+4. **Intégration e-commerce** — propose :
+   - **Auto-détection** (recommandé, valeur `null`)
+   - `Shopify`
+   - `WooCommerce`
+   - `BigCommerce`
+   - `Magento`
+   - `Stripe`
+
+## Étape 4 — Infos consultant (signature)
+
+1. **Ton prénom + nom** (apparaît en signature) — ex : `Jérôme Renard`
+2. **Ton agence / société** — ex : `Renard Publishing`
+3. **Ton e-mail** — ex : `jerome@renardpublishing.com`
+
+## Étape 5 — Features à activer
+
+Pose chaque question. Recommandation par défaut entre crochets.
+
+1. **Encart Top performer / À surveiller sur la slide newsletters ?** [Oui] (`topFlopHighlight`)
+2. **Comparaison vs benchmarks e-commerce sur la slide délivrabilité ?** [Oui] (`industryBenchmarks`)
+3. **Insights automatiques générés sur le résumé du mois ?** [Oui] (`autoInsights`)
+4. **Mode debug (logs verbeux pour résoudre les problèmes) ?** [Non] (`debug`)
+
+## Étape 6 — Sauvegarde de la config
+
+Crée le dossier `~/.klaviyo-audit/clients/` si nécessaire, puis écris le fichier `~/.klaviyo-audit/clients/[slug].json` avec ce schéma :
+
+```json
+{
+  "apiKey": "pk_xxx",
+  "client": {
+    "name": "SKWHEEL",
+    "tagline": "Les premiers skis électriques au monde",
+    "currency": "€",
+    "integration": null
+  },
+  "author": {
+    "name": "Jérôme Renard",
+    "company": "Renard Publishing",
+    "email": "jerome@renardpublishing.com"
+  },
+  "features": {
+    "topFlopHighlight": true,
+    "industryBenchmarks": true,
+    "autoInsights": true,
+    "debug": false
+  }
+}
+```
+
+**Sur Windows** : `~/.klaviyo-audit/` = `C:\Users\[USER]\.klaviyo-audit\`
+**Sur Mac/Linux** : `~/.klaviyo-audit/`
+
+Annonce à l'utilisateur où le fichier a été enregistré et rappelle de **ne jamais le committer dans Git**.
+
+## Étape 7 — Test de connexion
+
+Lance le test de connexion :
+
+```bash
+# Mac / Linux
+KLAVIYO_AUDIT_CLIENT=[slug] node ${CLAUDE_PLUGIN_ROOT}/scripts/test-api.js
+
+# Windows PowerShell
+$env:KLAVIYO_AUDIT_CLIENT="[slug]"; node ${CLAUDE_PLUGIN_ROOT}/scripts/test-api.js
+```
+
+Le test doit afficher :
+- ✓ Métriques trouvées (au moins une `Placed Order` détectée)
+- ✓ Dernières campagnes
+- ✓ Flows trouvés
+
+Si erreur 401 : la clé API est invalide. Demander à l'utilisateur de la régénérer et relancer.
+
+## Étape 8 — Proposer le premier rapport
+
+Propose : **« La configuration de `[slug]` est prête. Tu veux générer le rapport du mois dernier maintenant ? »**
+
+Si oui, invoque [`/audit-klaviyo`](audit-klaviyo.md).
+
+Si non, rappelle qu'il pourra lancer `/audit-klaviyo` à tout moment.
