@@ -1,6 +1,90 @@
 const { createKlaviyoClient } = require("./lib/klaviyo-api");
 const { generatePresentation } = require("./lib/generate-pptx");
 
+function normalizeManualData(manualData) {
+  const campaigns = (manualData.campaigns || []).map((c, idx) => {
+    const recipients = parseInt(c.recipients) || 0;
+    const openRate = parseFloat(c.openRate) || 0;
+    const clickRate = parseFloat(c.clickRate) || 0;
+    const conversions = parseInt(c.conversions) || 0;
+    const revenue = parseFloat(c.revenue) || 0;
+    return {
+      id: "manual-" + idx,
+      name: c.name || "Campagne " + (idx + 1),
+      sendDate: c.date || null,
+      recipients,
+      delivered: recipients,
+      opens: Math.round(recipients * openRate / 100),
+      opensUnique: Math.round(recipients * openRate / 100),
+      clicks: Math.round(recipients * clickRate / 100),
+      clicksUnique: Math.round(recipients * clickRate / 100),
+      conversions,
+      revenue,
+      openRate,
+      clickRate,
+      conversionRate: recipients > 0 ? (conversions / recipients) * 100 : 0,
+      revenuePerRecipient: recipients > 0 ? revenue / recipients : 0,
+      bounceRate: 0, unsubRate: 0, spamRate: 0, deliveryRate: 100,
+    };
+  });
+
+  const prevC = manualData.previousCampaigns || {};
+
+  const flows = (manualData.flows || []).map((f, idx) => {
+    const recipients = parseInt(f.recipients) || 0;
+    const openRate = parseFloat(f.openRate) || 0;
+    const conversions = parseInt(f.conversions) || 0;
+    const revenue = parseFloat(f.revenue) || 0;
+    const prevRevenue = parseFloat(f.prevRevenue) || 0;
+    return {
+      id: "manual-flow-" + idx,
+      name: f.name || "Séquence " + (idx + 1),
+      status: "live",
+      current: {
+        recipients, delivered: recipients,
+        opens: Math.round(recipients * openRate / 100),
+        opensUnique: Math.round(recipients * openRate / 100),
+        clicks: 0, clicksUnique: 0,
+        conversions, revenue, openRate, clickRate: 0,
+        conversionRate: recipients > 0 ? (conversions / recipients) * 100 : 0,
+        bounceRate: 0, unsubRate: 0, spamRate: 0,
+        revenuePerRecipient: recipients > 0 ? revenue / recipients : 0,
+      },
+      previous: {
+        recipients: 0, delivered: 0, opens: 0, opensUnique: 0, clicks: 0, clicksUnique: 0,
+        conversions: 0, revenue: prevRevenue, openRate: 0, clickRate: 0, conversionRate: 0,
+        bounceRate: 0, unsubRate: 0, spamRate: 0, revenuePerRecipient: 0,
+      },
+    };
+  });
+
+  const d = manualData.deliverability || {};
+  const pd = manualData.previousDeliverability || {};
+
+  const makeDeliv = (src) => ({
+    delivered: parseInt(src.delivered) || 0,
+    openRate: parseFloat(src.openRate) || 0,
+    clickRate: parseFloat(src.clickRate) || 0,
+    bounceRate: parseFloat(src.bounceRate) || 0,
+    spamRate: parseFloat(src.spamRate) || 0,
+    unsubRate: parseFloat(src.unsubRate) || 0,
+    openedUnique: 0, clickedUnique: 0, bounced: 0, spam: 0, unsubscribed: 0, conversions: 0, revenue: 0,
+  });
+
+  return {
+    campaigns: {
+      current: campaigns,
+      previous: {
+        count: parseInt(prevC.count) || 0,
+        totalRecipients: 0,
+        totalRevenue: parseFloat(prevC.totalRevenue) || 0,
+      },
+    },
+    flows,
+    deliverability: { current: makeDeliv(d), previous: makeDeliv(pd) },
+  };
+}
+
 const MONTH_NAMES_ACC = [
   "Janvier","Février","Mars","Avril","Mai","Juin",
   "Juillet","Août","Septembre","Octobre","Novembre","Décembre",
@@ -78,9 +162,10 @@ module.exports = async (req, res) => {
   }
 
   const body = req.body || {};
-  const { apiKey, month, client, author, features, benchmarks, nextSteps } = body;
+  const { mode, apiKey, month, client, author, features, benchmarks, nextSteps, manualData } = body;
+  const isManual = mode === "manual";
 
-  if (!apiKey || !String(apiKey).startsWith("pk_")) {
+  if (!isManual && (!apiKey || !String(apiKey).startsWith("pk_"))) {
     return res.status(400).json({ error: "Clé API Klaviyo invalide (doit commencer par pk_)" });
   }
 
@@ -96,13 +181,21 @@ module.exports = async (req, res) => {
   const config = buildConfig({ apiKey, month: REPORT_MONTH, client, author, features, benchmarks, nextSteps });
 
   try {
-    const klaviyo = createKlaviyoClient(config);
+    let campaigns, flows, deliverability;
 
-    console.log(`[generate] ${config.CLIENT.name} — ${config.REPORT_MONTH}`);
-
-    const campaigns = await klaviyo.getCampaigns();
-    const flows = await klaviyo.getFlows();
-    const deliverability = await klaviyo.getDeliverability();
+    if (isManual) {
+      if (!manualData) {
+        return res.status(400).json({ error: "Données manuelles manquantes" });
+      }
+      console.log(`[generate:manual] ${config.CLIENT.name} — ${config.REPORT_MONTH}`);
+      ({ campaigns, flows, deliverability } = normalizeManualData(manualData));
+    } else {
+      const klaviyo = createKlaviyoClient(config);
+      console.log(`[generate:api] ${config.CLIENT.name} — ${config.REPORT_MONTH}`);
+      campaigns = await klaviyo.getCampaigns();
+      flows = await klaviyo.getFlows();
+      deliverability = await klaviyo.getDeliverability();
+    }
 
     const buffer = await generatePresentation({ campaigns, flows, deliverability, config });
 
