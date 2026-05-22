@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klaviyo Audit — Renard Publishing</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #1E1C19;
+      --dark: #252320;
+      --slate: #333028;
+      --accent: #BF995A;
+      --accent-light: #D6B478;
+      --white: #ECE9E3;
+      --gray: #7C796F;
+      --red: #C45C4A;
+    }
+
+    body {
+      background: var(--navy);
+      color: var(--white);
+      font-family: 'Calibri', 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 40px 20px 60px;
+    }
+
+    .container { max-width: 700px; margin: 0 auto; }
+
+    /* Header */
+    .header { text-align: center; margin-bottom: 44px; }
+    .divider { width: 80px; height: 2px; background: var(--accent); margin: 14px auto; }
+    .header h1 {
+      font-family: 'Arial Black', Arial, sans-serif;
+      font-size: 1.9rem;
+      color: var(--accent);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+    .header p { color: var(--gray); margin-top: 6px; font-style: italic; font-size: 0.95rem; }
+
+    /* Sections */
+    .section {
+      background: var(--dark);
+      border-left: 3px solid var(--accent);
+      border-radius: 3px;
+      padding: 22px 24px;
+      margin-bottom: 16px;
+    }
+    .section h2 {
+      font-family: 'Arial Black', Arial, sans-serif;
+      font-size: 0.78rem;
+      color: var(--accent);
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    /* Fields */
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    label { display: block; font-size: 0.82rem; color: var(--gray); margin-bottom: 5px; }
+    input, select, textarea {
+      width: 100%;
+      background: var(--slate);
+      border: 1px solid #444;
+      border-radius: 3px;
+      color: var(--white);
+      font-size: 0.92rem;
+      padding: 9px 12px;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    select option { background: var(--slate); }
+    .hint { color: var(--gray); font-size: 0.74rem; margin-top: 4px; display: block; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    /* API key */
+    .api-key-wrap { position: relative; }
+    .api-key-wrap input { padding-right: 42px; }
+    .toggle-pw {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--gray); cursor: pointer;
+      font-size: 1rem; padding: 4px; line-height: 1;
+    }
+    .toggle-pw:hover { color: var(--accent); }
+
+    /* Checkboxes */
+    .checkbox-group { display: flex; flex-direction: column; gap: 11px; }
+    .checkbox-item { display: flex; align-items: center; gap: 11px; }
+    .checkbox-item input[type="checkbox"] { width: 17px; height: 17px; flex-shrink: 0; accent-color: var(--accent); }
+    .checkbox-item label { margin: 0; color: var(--white); font-size: 0.87rem; cursor: pointer; }
+
+    /* Next steps */
+    .step-card { background: var(--slate); border-radius: 3px; padding: 14px 16px; margin-bottom: 10px; }
+    .step-card:last-child { margin-bottom: 0; }
+    .step-num { font-family: 'Arial Black', Arial, sans-serif; color: var(--accent); font-size: 1rem; margin-bottom: 10px; }
+
+    /* Button */
+    .btn-generate {
+      width: 100%;
+      background: var(--accent);
+      color: var(--navy);
+      border: none;
+      border-radius: 3px;
+      padding: 15px;
+      font-family: 'Arial Black', Arial, sans-serif;
+      font-size: 0.95rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-top: 6px;
+    }
+    .btn-generate:hover:not(:disabled) { background: var(--accent-light); }
+    .btn-generate:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* Status */
+    .status { margin-top: 14px; padding: 13px 16px; border-radius: 3px; font-size: 0.88rem; display: none; }
+    .status-loading { background: var(--slate); color: var(--accent); display: none; align-items: center; gap: 12px; }
+    .status-error { background: rgba(196, 92, 74, 0.12); border: 1px solid var(--red); color: #e07060; display: none; }
+    .status-success { background: rgba(191, 153, 90, 0.12); border: 1px solid var(--accent); color: var(--accent-light); display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { width: 18px; height: 18px; border: 2px solid #444; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+
+    /* Footer */
+    .footer { text-align: center; margin-top: 36px; color: var(--gray); font-size: 0.76rem; line-height: 1.7; }
+
+    @media (max-width: 500px) {
+      .row { grid-template-columns: 1fr; }
+      .header h1 { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <header class="header">
+      <div class="divider"></div>
+      <h1>Klaviyo Audit</h1>
+      <p>Rapport mensuel Email Marketing — Renard Publishing</p>
+      <div class="divider"></div>
+    </header>
+
+    <form id="auditForm">
+
+      <!-- Connexion Klaviyo -->
+      <div class="section">
+        <h2>Connexion Klaviyo</h2>
+        <div class="field">
+          <label for="apiKey">Clé API Klaviyo <span style="color:var(--red)">*</span></label>
+          <div class="api-key-wrap">
+            <input type="password" id="apiKey" placeholder="pk_…" required autocomplete="off">
+            <button type="button" class="toggle-pw" onclick="togglePw()" title="Afficher / masquer">👁</button>
+          </div>
+          <span class="hint">Clé Read-only — jamais enregistrée sur nos serveurs, utilisée uniquement le temps de la requête.</span>
+        </div>
+      </div>
+
+      <!-- Informations client -->
+      <div class="section">
+        <h2>Informations client</h2>
+        <div class="field">
+          <label for="clientName">Nom du client <span style="color:var(--red)">*</span></label>
+          <input type="text" id="clientName" placeholder="ex : SKWHEEL" required>
+        </div>
+        <div class="field">
+          <label for="clientTagline">Tagline (sous-titre du rapport)</label>
+          <input type="text" id="clientTagline" placeholder="ex : Les premiers skis électriques au monde">
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="clientCurrency">Devise</label>
+            <select id="clientCurrency">
+              <option value="€" selected>€ Euro</option>
+              <option value="$">$ Dollar</option>
+              <option value="£">£ Livre</option>
+              <option value="CHF">CHF Franc suisse</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="clientIntegration">Intégration e-commerce</label>
+            <select id="clientIntegration">
+              <option value="">Auto-détection</option>
+              <option value="Shopify">Shopify</option>
+              <option value="WooCommerce">WooCommerce</option>
+              <option value="BigCommerce">BigCommerce</option>
+              <option value="Magento">Magento</option>
+              <option value="Stripe">Stripe</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Informations consultant -->
+      <div class="section">
+        <h2>Informations consultant</h2>
+        <div class="row">
+          <div class="field">
+            <label for="authorName">Nom <span style="color:var(--red)">*</span></label>
+            <input type="text" id="authorName" placeholder="Jérôme Renard" required>
+          </div>
+          <div class="field">
+            <label for="authorCompany">Société</label>
+            <input type="text" id="authorCompany" placeholder="Renard Publishing">
+          </div>
+        </div>
+        <div class="field">
+          <label for="authorEmail">E-mail</label>
+          <input type="email" id="authorEmail" placeholder="jerome@renardpublishing.com">
+        </div>
+      </div>
+
+      <!-- Rapport -->
+      <div class="section">
+        <h2>Rapport</h2>
+        <div class="field">
+          <label for="reportMonth">Mois à auditer <span style="color:var(--red)">*</span></label>
+          <input type="month" id="reportMonth" required>
+        </div>
+      </div>
+
+      <!-- Options -->
+      <div class="section">
+        <h2>Options</h2>
+        <div class="checkbox-group">
+          <div class="checkbox-item">
+            <input type="checkbox" id="topFlopHighlight" checked>
+            <label for="topFlopHighlight">Encart Top / À surveiller (meilleures et moins bonnes newsletters)</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="industryBenchmarks" checked>
+            <label for="industryBenchmarks">Benchmarks marché (comparaison vs industrie e-commerce)</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="autoInsights" checked>
+            <label for="autoInsights">Insights automatiques (analyse des données du mois)</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prochaines étapes -->
+      <div class="section">
+        <h2>Prochaines étapes <span style="font-size:0.7rem;letter-spacing:0;text-transform:none;color:var(--gray);font-family:'Calibri',sans-serif;font-weight:normal">(Slide 8)</span></h2>
+        <p style="color:var(--gray);font-size:0.8rem;margin-bottom:14px;font-style:italic">Ces étapes apparaissent sur la slide "Prochaines étapes". Personnalisez-les pour chaque client.</p>
+        <div id="stepsContainer"></div>
+      </div>
+
+      <button type="submit" class="btn-generate" id="generateBtn">Générer le rapport PPTX</button>
+
+      <div class="status status-loading" id="statusLoading">
+        <div class="spinner"></div>
+        <span>Génération en cours — récupération des données Klaviyo et création du PPTX… (30 à 60 s)</span>
+      </div>
+      <div class="status status-error" id="statusError"></div>
+      <div class="status status-success" id="statusSuccess">✓ Rapport généré — le téléchargement a démarré automatiquement.</div>
+    </form>
+
+    <footer class="footer">
+      <p>Renard Publishing — Outil interne de génération de rapports Klaviyo</p>
+      <p>La clé API transite uniquement le temps de la requête et n'est jamais stockée.</p>
+    </footer>
+  </div>
+
+  <script>
+    // Mois par défaut : mois précédent
+    (function () {
+      const now = new Date();
+      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      document.getElementById('reportMonth').value =
+        prev.getFullYear() + '-' + String(prev.getMonth() + 1).padStart(2, '0');
+    })();
+
+    // Champs "Prochaines étapes"
+    const defaultSteps = [
+      { title: 'Prochaine étape', body: 'À définir avec le client.' },
+      { title: 'Prochaine étape', body: 'À définir avec le client.' },
+      { title: 'Prochaine étape', body: 'À définir avec le client.' },
+    ];
+    const stepsContainer = document.getElementById('stepsContainer');
+    defaultSteps.forEach(function (step, i) {
+      const card = document.createElement('div');
+      card.className = 'step-card';
+      card.innerHTML = '<div class="step-num">0' + (i + 1) + '</div>';
+
+      const f1 = document.createElement('div'); f1.className = 'field';
+      const l1 = document.createElement('label'); l1.textContent = 'Titre';
+      const inp = document.createElement('input'); inp.type = 'text'; inp.id = 'stepTitle' + i; inp.value = step.title;
+      f1.appendChild(l1); f1.appendChild(inp); card.appendChild(f1);
+
+      const f2 = document.createElement('div'); f2.className = 'field'; f2.style.marginTop = '8px';
+      const l2 = document.createElement('label'); l2.textContent = 'Description';
+      const ta = document.createElement('textarea'); ta.id = 'stepBody' + i; ta.rows = 3; ta.style.resize = 'vertical'; ta.textContent = step.body;
+      f2.appendChild(l2); f2.appendChild(ta); card.appendChild(f2);
+
+      stepsContainer.appendChild(card);
+    });
+
+    function togglePw() {
+      const inp = document.getElementById('apiKey');
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    }
+
+    function showStatus(type) {
+      ['Loading', 'Error', 'Success'].forEach(function (t) {
+        const el = document.getElementById('status' + t);
+        el.style.display = 'none';
+      });
+      const el = document.getElementById('status' + type);
+      el.style.display = type === 'Loading' ? 'flex' : 'block';
+    }
+
+    function setError(msg) {
+      const el = document.getElementById('statusError');
+      el.textContent = '✗ ' + msg;
+      showStatus('Error');
+    }
+
+    function buildPayload() {
+      const v = function (id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+      const chk = function (id) { const el = document.getElementById(id); return el ? el.checked : true; };
+
+      const nextSteps = [0, 1, 2].map(function (i) {
+        return {
+          num: '0' + (i + 1),
+          title: v('stepTitle' + i),
+          body: v('stepBody' + i),
+        };
+      }).filter(function (s) { return s.title; });
+
+      return {
+        apiKey: v('apiKey'),
+        month: v('reportMonth'),
+        client: {
+          name: v('clientName').toUpperCase(),
+          tagline: v('clientTagline'),
+          currency: v('clientCurrency'),
+          integration: v('clientIntegration') || null,
+        },
+        author: {
+          name: v('authorName'),
+          company: v('authorCompany'),
+          email: v('authorEmail'),
+        },
+        features: {
+          topFlopHighlight: chk('topFlopHighlight'),
+          industryBenchmarks: chk('industryBenchmarks'),
+          autoInsights: chk('autoInsights'),
+        },
+        nextSteps: nextSteps.length ? nextSteps : null,
+      };
+    }
+
+    document.getElementById('auditForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const btn = document.getElementById('generateBtn');
+      btn.disabled = true;
+      showStatus('Loading');
+
+      try {
+        const payload = buildPayload();
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const err = await response.json().catch(function () { return { error: 'Erreur ' + response.status }; });
+          throw new Error(err.error || 'Erreur inconnue');
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+
+        const disposition = response.headers.get('Content-Disposition') || '';
+        const match = disposition.match(/filename\*=UTF-8''(.+)/i);
+        a.download = match ? decodeURIComponent(match[1]) : 'rapport-klaviyo.pptx';
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+
+        showStatus('Success');
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
