@@ -154,7 +154,7 @@
         <div class="field">
           <label for="apiKey">Clé API Klaviyo <span style="color:var(--red)">*</span></label>
           <div class="api-key-wrap">
-            <input type="password" id="apiKey" placeholder="pk_…" autocomplete="off">
+            <input type="password" id="apiKey" placeholder="pk_…" autocomplete="off" required>
             <button type="button" class="toggle-pw" onclick="togglePw()" title="Afficher / masquer">👁</button>
           </div>
           <span class="hint">Clé Read-only — non enregistrée, utilisée uniquement le temps de la requête.</span>
@@ -617,6 +617,14 @@
 
     try {
       var payload = buildPayload();
+
+      // Validation côté client pour le mode manuel
+      if (currentMode === 'manual') {
+        if (!payload.manualData.campaigns.length && !payload.manualData.flows.length) {
+          throw new Error('Saisie manuelle : ajoutez au moins une campagne ou une séquence.');
+        }
+      }
+
       var response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
