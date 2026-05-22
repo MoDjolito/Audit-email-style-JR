@@ -1,0 +1,79 @@
+#!/usr/bin/env node
+// ============================================================
+// KLAVIYO REPORT GENERATOR — Plugin entry point
+// ============================================================
+//
+// Usage:
+//   KLAVIYO_AUDIT_CLIENT=skwheel REPORT_MONTH=2026-04 node index.js
+//
+// La config du client est chargee depuis:
+//   ~/.klaviyo-audit/clients/[KLAVIYO_AUDIT_CLIENT].json
+//
+// ============================================================
+
+const config = require("./config");
+const { getCampaigns, getFlows, getDeliverability } = require("./klaviyo-api");
+const { generatePresentation } = require("./generate-pptx");
+
+async function main() {
+  console.log("=".repeat(60));
+  console.log("KLAVIYO AUDIT — " + config.AUTHOR.company);
+  console.log("=".repeat(60));
+  console.log(`Client:  ${config.CLIENT.name}  (slug: ${config.CLIENT_SLUG})`);
+  console.log(`Mois:    ${config.MONTH_LABEL}`);
+  console.log(`Sortie:  ${config.OUTPUT_DIR}`);
+  console.log("=".repeat(60));
+
+  if (!config.KLAVIYO_API_KEY || config.KLAVIYO_API_KEY.includes("XXXX") || !config.KLAVIYO_API_KEY.startsWith("pk_")) {
+    console.error("\nERREUR: Cle API Klaviyo manquante ou invalide.");
+    console.error("Verifier le fichier ~/.klaviyo-audit/clients/" + config.CLIENT_SLUG + ".json");
+    console.error("Ou re-lancer /audit-klaviyo-setup.\n");
+    process.exit(1);
+  }
+
+  try {
+    console.log("\n[1/4] Recuperation des campagnes...");
+    const campaigns = await getCampaigns();
+
+    console.log("\n[2/4] Recuperation des flows...");
+    const flows = await getFlows();
+
+    console.log("\n[3/4] Recuperation de la delivrabilite...");
+    const deliverability = await getDeliverability();
+
+    const fs = require("fs");
+    const path = require("path");
+    const dataDir = path.join(config.OUTPUT_DIR, "data");
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
+    const rawData = {
+      campaigns, flows, deliverability,
+      generatedAt: new Date().toISOString(),
+      config: { month: config.REPORT_MONTH, client: config.CLIENT.name, slug: config.CLIENT_SLUG },
+    };
+    fs.writeFileSync(
+      path.join(dataDir, `data-${config.CLIENT_SLUG}-${config.REPORT_MONTH}.json`),
+      JSON.stringify(rawData, null, 2)
+    );
+    console.log(`\nDonnees brutes sauvegardees: ${dataDir}/data-${config.CLIENT_SLUG}-${config.REPORT_MONTH}.json`);
+
+    console.log("\n[4/4] Generation de la presentation...");
+    const outputPath = await generatePresentation({ campaigns, flows, deliverability });
+
+    console.log("\n" + "=".repeat(60));
+    console.log("TERMINE !");
+    console.log("=".repeat(60));
+    console.log(`Fichier: ${outputPath}`);
+  } catch (err) {
+    console.error("\nERREUR:", err.message);
+    if (err.message.includes("401")) {
+      console.error("  -> Cle API invalide. Verifier la cle dans ~/.klaviyo-audit/clients/" + config.CLIENT_SLUG + ".json");
+    }
+    if (err.message.includes("429")) {
+      console.error("  -> Rate limit atteint. Reessayer dans quelques minutes.");
+    }
+    process.exit(1);
+  }
+}
+
+main();
