@@ -1,0 +1,16 @@
+# Dependencies (a regenerer via npm install)
+scripts/node_modules/
+
+# Fichiers de config et sortie utilisateur — JAMAIS dans le repo
+# (stockes dans ~/.klaviyo-audit/ hors du plugin de toute facon)
+**/.env
+**/.env.*
+
+# Logs et caches
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
