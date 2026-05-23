@@ -3,7 +3,7 @@
 // ~/.klaviyo-audit/clients/[slug].json
 //
 // Variables d'env attendues:
-//   KLAVIYO_AUDIT_CLIENT  : slug du client (ex: "skwheel")
+//   KLAVIYO_AUDIT_CLIENT  : slug du client (ex: "Entreprise")
 //   REPORT_MONTH          : mois a auditer (format YYYY-MM)
 //   KLAVIYO_API_KEY       : (optionnel) override de la cle API
 //   KLAVIYO_AUDIT_HOME    : (optionnel) override du dossier ~/.klaviyo-audit
