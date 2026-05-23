@@ -1,7 +1,7 @@
 {
   "name": "klaviyo-audit-scripts",
   "version": "1.0.0",
-  "description": "Scripts Node.js du plugin Klaviyo Audit — Renard Publishing",
+  "description": "Scripts Node.js du plugin Klaviyo Audit — Hélios Rédaction",
   "main": "index.js",
   "scripts": {
     "generate": "node index.js",
@@ -17,7 +17,7 @@
   "engines": {
     "node": ">=18"
   },
-  "author": "Jerome Renard - Renard Publishing",
+  "author": "Jordan HENRY PAUL - Hélios Rédaction",
   "license": "UNLICENSED",
   "private": true
 }
